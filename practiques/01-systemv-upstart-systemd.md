@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Sistemes d'inici"
+---
+
 # Sistemes d'inici
 
 ## Índex
