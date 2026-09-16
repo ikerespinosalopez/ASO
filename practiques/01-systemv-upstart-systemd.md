@@ -20,7 +20,31 @@
 
 ## 1. SystemV vs Upstart vs Systemd
 
+**Conceptes bàsics**
+
+- **Kernel** → gestiona els processos.
+- **Aplicació** → programa interactiu, que s'executa amb l'usuari.
+- **Servei** → programa associat al SO, que s'executa en 2n pla.
+- **Procés** → funció interna del SO. Tant les aplicacions com els serveis, un cop en marxa, es converteixen en processos que el SO ha de gestionar i planificar.
+
 ### 1.1 Runlevels o targets?
+
+**Nivells d'execució (runlevels)**
+
+| Nivell | Significat |
+|---|---|
+| 0 | Power off (apagat) |
+| 1 | Rescue / mode d'un sol usuari |
+| 2–5 | Multiusuari, xarxa, entorn gràfic... (varia segons la distribució) |
+| 6 | Reboot |
+
+**Tres formes equivalents d'aturar un servei**, segons el sistema d'inici:
+
+```bash
+/etc/init.d/cron stop     # SystemV clàssic (script directe)
+service cron stop         # comanda "service" (compatibilitat/Upstart)
+systemctl stop cron       # Systemd
+```
 
 ### 1.2 Quin és el nostre SO?
 
