@@ -10,17 +10,59 @@
 <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
 </head>
 <body>
-  <div class="wrap">
-    <nav class="page-nav">
-      <a href="{{ '/' | relative_url }}">← ASO</a>
-    </nav>
-    <article class="content">
-      {{ content }}
-    </article>
-    <footer>
-      <span>Iker Espinosa López · ASO</span>
-      <a href="https://github.com/ikerespinosalopez/ASO">↳ veure el codi al repositori</a>
-    </footer>
+  <div class="doc-layout">
+    <aside class="doc-sidebar">
+      <div class="doc-sidebar-inner">
+        <a class="home-link" href="{{ '/' | relative_url }}">← ASO</a>
+        <div class="doc-toc-label">En aquesta pàgina</div>
+        <nav id="doc-toc" class="doc-toc"></nav>
+      </div>
+    </aside>
+
+    <main class="doc-main">
+      <article class="content">
+        {{ content }}
+      </article>
+      <footer>
+        <span>Iker Espinosa López · ASO</span>
+        <a href="https://github.com/ikerespinosalopez/ASO">↳ veure el codi al repositori</a>
+      </footer>
+    </main>
   </div>
+
+  <a id="to-top" class="to-top" href="#index" title="Torna a l'índex" aria-label="Torna a l'índex">↑</a>
+
+  <script>
+  (function(){
+    var headings = document.querySelectorAll('.content h2, .content h3');
+    var toc = document.getElementById('doc-toc');
+    var items = [];
+    headings.forEach(function(h){
+      if(!h.id) return;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      a.className = h.tagName === 'H3' ? 'level-3' : 'level-2';
+      toc.appendChild(a);
+      items.push({el:h, link:a});
+    });
+
+    var btn = document.getElementById('to-top');
+
+    function onScroll(){
+      var pos = window.scrollY + 120;
+      var current = null;
+      items.forEach(function(item){
+        if(item.el.offsetTop <= pos) current = item;
+      });
+      items.forEach(function(item){
+        item.link.classList.toggle('active', item === current);
+      });
+      if(btn) btn.classList.toggle('visible', window.scrollY > 300);
+    }
+    window.addEventListener('scroll', onScroll, {passive:true});
+    onScroll();
+  })();
+  </script>
 </body>
 </html>
