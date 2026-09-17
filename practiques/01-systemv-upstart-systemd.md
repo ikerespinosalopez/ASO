@@ -5,7 +5,7 @@ title: "Sistemes d'inici"
 
 # Sistemes d'inici
 
-## Índex {: #index}
+## <a id="index"></a>Índex
 
 - [1. SystemV vs Upstart vs Systemd](#1-systemv-vs-upstart-vs-systemd)
   - [1.1 Runlevels o targets?](#11-runlevels-o-targets)
