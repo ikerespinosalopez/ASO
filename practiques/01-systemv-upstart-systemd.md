@@ -33,6 +33,17 @@ title: "Sistemes d'inici"
 - **Servei** → programa associat al SO, que s'executa en 2n pla.
 - **Procés** → funció interna del SO. Tant les aplicacions com els serveis, un cop en marxa, es converteixen en processos que el SO ha de gestionar i planificar.
 
+**Els tres sistemes, en breu**
+
+| | SystemV (SysV init) | Upstart | Systemd |
+|---|---|---|---|
+| Època | Init clàssic d'Unix, dècades d'ús a Linux | Ubuntu 2006–2015 (pas intermedi) | Estàndard actual a la majoria de distros |
+| Model | Scripts seqüencials (`/etc/init.d`, `rcN.d`) | Basat en esdeveniments ("jobs"), mantenint compatibilitat amb `/etc/init.d` | Unitats declaratives (`.service`, `.target`...) amb dependències |
+| Arrencada | Un servei rere l'altre, en ordre fix (`S##`) | Pot reaccionar a esdeveniments (ex: connectar un dispositiu), no només a un ordre fix | En paral·lel, seguint un graf de dependències |
+| Estat avui | En desús (només compatibilitat) | Abandonat (substituït per systemd des d'Ubuntu 15.04) | Actiu — el que fem servir nosaltres |
+
+Upstart va ser el pas intermedi d'Ubuntu entre SystemV i systemd: mantenia compatibilitat amb els scripts de `/etc/init.d` però afegia la capacitat d'arrencar/aturar serveis en resposta a esdeveniments. Ubuntu el va fer servir des de la versió 6.10 (2006) fins que el va substituir per systemd a partir de la 15.04 (2015).
+
 ### 1.1 Runlevels o targets?
 
 **SystemV** parla de *runlevels* (nivells d'execució, numèrics). **Systemd** parla de *targets* (punts de sincronització amb nom). Són el mateix concepte amb dos noms diferents segons el sistema d'inici.
@@ -112,6 +123,12 @@ init 6                      # canvia de runlevel → dispara els scripts K de l'
 
 ## 3. Systemd
 
+**Per què systemd (i no SysV ni Upstart)?**
+
+- **Arrencada en paral·lel**: SysV arrenca els serveis un darrere l'altre, seguint estrictament l'ordre numèric dels scripts `S##` de `/etc/rcN.d`. Systemd construeix un graf de dependències (`Requires=`, `After=`...) i arrenca en paral·lel tot allò que no depèn d'una altra cosa — per això el temps de boot és molt més curt.
+- **Activació sota demanda (socket/D-Bus activation)**: un servei no cal que estigui ja engegat per rebre connexions — systemd pot "escoltar" el seu socket i arrencar el servei just quan arriba la primera petició, endarrerint (o evitant del tot) arrencades innecessàries.
+- **Un sol format declaratiu**: en lloc d'un script de shell per servei (SysV/Upstart), una unitat `.service` descriu *què* fer i *de què depèn*, i és systemd qui decideix *quan* i *en quin ordre* executar-ho.
+
 ### 3.1 Directoris
 
 Dos directoris importants (**no són el mateix camí, no es barregen**):
@@ -120,6 +137,14 @@ Dos directoris importants (**no són el mateix camí, no es barregen**):
 - **`/etc/systemd/system`** → on van els canvis/overrides locals (per exemple, els enllaços que crea `systemctl enable`).
 
 Tipus d'unitats més habituals: `.target`, `.service`, `.socket` (també existeixen `.mount`, `.timer`, `.path`, entre d'altres).
+
+**Vols personalitzar un servei sense tocar `/lib`?**
+
+```bash
+systemctl edit ssh
+```
+
+Obre un editor i crea automàticament un fitxer *drop-in* a `/etc/systemd/system/ssh.service.d/override.conf`, on només cal escriure les línies que vulguis canviar (no cal copiar tot el `.service` sencer). Systemd combina l'original de `/lib` amb el teu override.
 
 ### 3.2 systemctl
 
@@ -137,6 +162,17 @@ ls -l /lib/systemd/system/runlevel*.target   # enllaços de compatibilitat runle
 systemd-analyze         # temps total d'arrencada (firmware/kernel/userspace)
 systemd-analyze blame   # quins serveis triguen més a arrencar
 ```
+
+**Veure els logs d'un servei: `journalctl`**
+
+```bash
+journalctl -u ssh              # tots els logs del servei ssh
+journalctl -u ssh -f           # en viu (com "tail -f")
+journalctl -u ssh --since today
+journalctl -p err              # només missatges d'error, de tots els serveis
+```
+
+És el complement natural de `systemctl status`: quan un servei no arrenca o falla, aquí és on es veu *per què*.
 
 ### 3.3 Dependències
 
@@ -233,6 +269,18 @@ SysVStartPriority=99
 [Install]
 WantedBy=multi-user.target
 ```
+
+**Què vol dir cada línia?**
+
+| Directiva | Significat |
+|---|---|
+| `Description=` | Text descriptiu (surt a `systemctl status`) |
+| `ConditionPathExists=` | Només s'executa si aquest fitxer existeix |
+| `Type=forking` | El procés es "bifurca" i el pare original acaba (típic de dimonis clàssics) |
+| `ExecStart=` | Comanda que engega el servei |
+| `TimeoutSec=0` | Sense límit de temps per considerar-lo arrencat |
+| `RemainAfterExit=yes` | Es considera "actiu" encara que el procés principal acabi |
+| `WantedBy=multi-user.target` | A quin target s'"enganxa" en fer `systemctl enable` |
 
 **3. L'activem i el comprovem:**
 
