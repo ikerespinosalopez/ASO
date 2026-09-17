@@ -169,13 +169,14 @@ footer a:hover{color:var(--accent);border-color:var(--accent-dim);}
   display:grid;
   grid-template-columns:230px minmax(0,760px);
   gap:56px;
-  align-items:start;
 }
 .doc-sidebar{min-width:0;}
 .doc-sidebar-inner{
   position:sticky;
   top:28px;
   padding-top:64px;
+  max-height:100vh;
+  overflow-y:auto;
 }
 .doc-sidebar .home-link{
   display:inline-block;
