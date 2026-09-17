@@ -1,6 +1,8 @@
 ---
 layout: default
 title: "Sistemes d'inici"
+description: "SystemV vs Upstart vs Systemd: runlevels, targets, directoris, systemctl i gestió de serveis."
+last_updated: 2026-09-17
 ---
 
 # Sistemes d'inici
