@@ -4,12 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ page.title | default: site.title }} · ASO</title>
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
 </head>
 <body>
+  <div id="progress-bar" class="progress-bar"></div>
+
   <div class="doc-layout">
     <aside class="doc-sidebar">
       <div class="doc-sidebar-inner">
@@ -48,6 +51,7 @@
     });
 
     var btn = document.getElementById('to-top');
+    var progressBar = document.getElementById('progress-bar');
 
     function onScroll(){
       var pos = window.scrollY + 120;
@@ -59,9 +63,59 @@
         item.link.classList.toggle('active', item === current);
       });
       if(btn) btn.classList.toggle('visible', window.scrollY > 300);
+
+      if(progressBar){
+        var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        var pct = docHeight > 0 ? Math.min(100, (window.scrollY / docHeight) * 100) : 0;
+        progressBar.style.width = pct + '%';
+      }
     }
     window.addEventListener('scroll', onScroll, {passive:true});
+    window.addEventListener('resize', onScroll);
     onScroll();
+
+    document.querySelectorAll('.content pre').forEach(function(pre){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copy-btn';
+      btn.textContent = 'copiar';
+      btn.addEventListener('click', function(){
+        var code = pre.querySelector('code');
+        var text = code ? code.innerText : pre.innerText;
+
+        function showResult(ok){
+          btn.textContent = ok ? 'copiat!' : 'error';
+          btn.classList.toggle('copied', ok);
+          setTimeout(function(){
+            btn.textContent = 'copiar';
+            btn.classList.remove('copied');
+          }, 1500);
+        }
+
+        function fallbackCopy(){
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+          document.body.removeChild(ta);
+          showResult(ok);
+        }
+
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(function(){
+            showResult(true);
+          }).catch(fallbackCopy);
+        } else {
+          fallbackCopy();
+        }
+      });
+      pre.appendChild(btn);
+    });
   })();
   </script>
 </body>

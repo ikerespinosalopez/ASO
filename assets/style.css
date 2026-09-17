@@ -243,6 +243,17 @@ footer a:hover{color:var(--accent);border-color:var(--accent-dim);}
 .to-top.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
 .to-top:hover{border-color:var(--accent-dim);transform:translateY(-2px);}
 
+.progress-bar{
+  position:fixed;
+  top:0;left:0;
+  height:3px;
+  width:0%;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent);
+  z-index:60;
+  transition:width .1s linear;
+}
+
 @media (max-width:900px){
   .doc-layout{grid-template-columns:1fr;}
   .doc-sidebar{display:none;}
@@ -281,6 +292,7 @@ footer a:hover{color:var(--accent);border-color:var(--accent-dim);}
   color:var(--amber);
 }
 .content pre{
+  position:relative;
   background:var(--bg-panel);
   border:1px solid var(--border);
   border-radius:10px;
@@ -289,6 +301,27 @@ footer a:hover{color:var(--accent);border-color:var(--accent-dim);}
 }
 .content pre code{
   background:none;border:none;padding:0;color:var(--text);
+}
+
+.copy-btn{
+  position:absolute;
+  top:8px;right:8px;
+  background:var(--bg);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  padding:4px 9px;
+  border-radius:6px;
+  cursor:pointer;
+  opacity:0;
+  transition:opacity .15s ease, color .15s ease, border-color .15s ease;
+}
+.content pre:hover .copy-btn{opacity:1;}
+.copy-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+.copy-btn.copied{color:var(--accent);border-color:var(--accent);opacity:1;}
+@media (max-width:900px){
+  .copy-btn{opacity:1;}
 }
 
 .content table{
