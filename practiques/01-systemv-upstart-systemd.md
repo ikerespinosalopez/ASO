@@ -376,126 +376,37 @@ Després de reiniciar, `/etc/passwd` hauria d'haver-hi afegit la lletra `a` al f
 - Aquest servei ha d'executar un **script amb permisos de root, abans que acabi d'arrencar el SO** (seguint el patró de [3.8](#38-crear-un-nou-servei)).
 - El script pot fer el que vulguem — alguna cosa "xula" per demostrar-ho (com l'exemple de la lletra `a` a `/etc/passwd`, però una mica més elaborat).
 
-El target (`aso.target`) ja està fet al punt [3.7](#37-creem-un-nou-target). El que faltava era l'`.service` i l'script reals. Aquí sota hi ha la solució completa.
+El target (`aso.target`) ja està creat al punt [3.7](#37-creem-un-nou-target). Falta: escriure el nostre script, crear el `.service` que l'enganxi a `aso.target`, i provar-ho amb captures.
 
-### L'script: comptador d'arrencades + banner a `/etc/motd`
+### Passos
 
-En lloc de només afegir una lletra a `/etc/passwd`, l'script fa tres coses cada cop que arrenca la màquina, totes amb permisos de root:
+1. **L'script** — el nostre, amb permisos de root, guardat per exemple a `/usr/local/bin/`. Ha de fer alguna cosa demostrable (que es noti clarament que s'ha executat en arrencar).
+   > **Captura:** contingut de l'script (`cat`).
 
-1. Porta un **comptador d'arrencades** persistent a `/var/lib/aso/boot-count` (demostra, arrencada rere arrencada, que el servei s'executa sempre).
-2. Deixa constància a `/var/log/aso-boot.log` (data, número d'arrencada, target actiu, host, IP, kernel).
-3. Genera un **banner** a `/etc/motd` amb tota aquesta informació — el primer que es veu en fer login (SSH o consola) després d'arrencar.
+2. **El `.service`** — a `/etc/systemd/system/`, seguint el patró del [3.8](#38-crear-un-nou-servei) però amb `WantedBy=aso.target` (no `multi-user.target`) a `[Install]`, i `ExecStart=` apuntant al nostre script.
+   > **Captura:** contingut del fitxer `.service` (`cat`).
 
-[`aso-boot.sh`]({{ '/practiques/scripts/aso-boot.sh' | relative_url }}):
+3. **Activar-ho:**
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable elteuservei.service   # crea l'enllaç a /etc/systemd/system/aso.target.wants/
+   sudo systemctl start elteuservei.service    # el prova sense esperar a un reboot
+   ```
+   > **Captura:** `systemctl status aso.target` i `systemctl status elteuservei.service` després del `start` manual.
 
-```bash
-#!/bin/bash
-set -e
+4. **Target per defecte** (si no es va fer ja al 3.7):
+   ```bash
+   sudo systemctl set-default aso.target
+   ```
+   > **Captura:** `systemctl get-default` mostrant `aso.target`.
 
-LOGFILE="/var/log/aso-boot.log"
-COUNTFILE="/var/lib/aso/boot-count"
-MOTDFILE="/etc/motd"
-
-mkdir -p "$(dirname "$COUNTFILE")"
-
-if [ -f "$COUNTFILE" ]; then
-    COUNT=$(($(cat "$COUNTFILE") + 1))
-else
-    COUNT=1
-fi
-echo "$COUNT" > "$COUNTFILE"
-
-HOST=$(hostname)
-KERNEL=$(uname -r)
-DATA=$(date '+%Y-%m-%d %H:%M:%S')
-IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-TARGET=$(systemctl get-default)
-PUJADA=$(uptime -p)
-
-echo "[$DATA] Arrencada #$COUNT - target=$TARGET - host=$HOST - ip=${IP:-cap} - kernel=$KERNEL" >> "$LOGFILE"
-
-cat > "$MOTDFILE" <<EOF
-
-╔══════════════════════════════════════════════╗
-  ASO · $HOST
-  Target actiu:    $TARGET
-  Arrencada núm.:  $COUNT
-  Data:            $DATA
-  Kernel:          $KERNEL
-  IP:              ${IP:-(sense xarxa)}
-  Uptime:          $PUJADA
-╚══════════════════════════════════════════════╝
-
-EOF
-
-exit 0
-```
-
-```bash
-sudo cp aso-boot.sh /usr/local/bin/aso-boot.sh
-sudo chmod +x /usr/local/bin/aso-boot.sh
-```
-
-### El servei: `aso.service`
-
-```bash
-sudo nano /etc/systemd/system/aso.service
-```
-
-```ini
-[Unit]
-Description=Servei personalitzat ASO - banner d'arrencada
-After=aso.target
-Requires=aso.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/aso-boot.sh
-RemainAfterExit=yes
-StandardOutput=journal
-
-[Install]
-WantedBy=aso.target
-```
-
-**Diferències respecte al `rc-local.service` del [3.8](#38-crear-un-nou-servei):**
-
-| Directiva | Per què canvia |
-|---|---|
-| `Type=oneshot` (en lloc de `forking`) | El nostre script no es bifurca ni queda resident: s'executa d'un tir i acaba. `oneshot` és el tipus pensat per a això. |
-| `RemainAfterExit=yes` | Igual que al 3.8: encara que el procés acabi de seguida, systemd el considera "actiu" (surt com a `active (exited)` a `systemctl status`). |
-| `WantedBy=aso.target` (en lloc de `multi-user.target`) | És el punt clau de l'enunciat: el servei s'enganxa al **nostre** target, no al genèric. |
-| `After=` / `Requires=aso.target` | Assegura que el servei només arrenca quan `aso.target` (i, per herència, `multi-user.target`) ja estan actius. |
-
-### Activar-ho tot
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable aso.service      # crea l'enllaç a /etc/systemd/system/aso.target.wants/
-sudo systemctl start aso.service       # el prova sense esperar a un reboot
-systemctl status aso.service
-cat /etc/motd
-```
-
-> **Captura 1:** `cat /usr/local/bin/aso-boot.sh` i `cat /etc/systemd/system/aso.service`.
-
-> **Captura 2:** `systemctl status aso.target` i `systemctl status aso.service` just després del `start` manual, mostrant `active (exited)`.
-
-### Prova real: reiniciar diverses vegades
-
-La prova de foc és que el comptador pugi sol, sense intervenció, arrencada rere arrencada:
-
-```bash
-sudo reboot
-# ... un cop tornada a arrencar la màquina:
-systemctl get-default            # ha de mostrar aso.target
-cat /etc/motd                    # banner actualitzat, comptador +1
-cat /var/log/aso-boot.log        # una línia nova per cada arrencada
-journalctl -u aso.service -b     # logs del servei en aquest darrer boot
-```
-
-> **Captura 3:** `systemctl get-default` mostrant `aso.target` com a target per defecte.
-
-> **Captura 4:** `cat /etc/motd` després d'almenys dues arrencades seguides, mostrant el comptador incrementant-se.
-
-> **Captura 5:** `cat /var/log/aso-boot.log` amb diverses línies (una per arrencada) i `journalctl -u aso.service -b` confirmant que el servei s'ha executat correctament al darrer boot.
+5. **Prova real — reiniciar:**
+   ```bash
+   sudo reboot
+   ```
+   Un cop tornada a arrencar:
+   ```bash
+   systemctl status aso.target elteuservei.service
+   journalctl -u elteuservei.service -b
+   ```
+   > **Captura:** l'efecte del nostre script (allò "xula" que fa) + `journalctl -u elteuservei.service -b` demostrant que s'ha executat sol en aquest darrer arrencament, sense intervenció manual.
