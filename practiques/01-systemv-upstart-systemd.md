@@ -2,7 +2,7 @@
 layout: default
 title: "Sistemes d'inici"
 description: "SystemV vs Upstart vs Systemd: runlevels, targets, directoris, systemctl i gestió de serveis."
-last_updated: 2026-09-17
+last_updated: 2026-09-23
 ---
 
 # Sistemes d'inici
@@ -225,7 +225,75 @@ systemctl disable ssh    # el treu del target (elimina l'enllaç)
 
 ### 3.7 Creem un nou target
 
-_Pendent — forma part de la [Feina](#feina-pràctica)._
+Un target no és res "màgic": és un fitxer `.target` que actua com a **etiqueta de sincronització** — diu "quan jo estigui actiu, aquestes altres unitats també ho han d'estar". Crear un target propi vol dir crear un fitxer nou que **hereta** tot el que ja fa un target existent, i després hi enganxem el nostre servei.
+
+**1. Creem el fitxer del target** (sempre a `/etc/systemd/system/`, mai a `/lib`, com al punt 3.1):
+
+```bash
+nano /etc/systemd/system/aso.target
+```
+
+```ini
+[Unit]
+Description=Target personalitzat ASO
+Requires=multi-user.target
+After=multi-user.target
+AllowIsolate=yes
+```
+
+**Què vol dir cada línia?**
+
+| Directiva | Significat |
+|---|---|
+| `Requires=multi-user.target` | El nostre target **necessita** que `multi-user.target` estigui actiu — en activar-se el nostre, arrossega tot el que ja porta aquell (xarxa, serveis bàsics...). És el "que en depengui" de l'enunciat. |
+| `After=multi-user.target` | Garanteix l'**ordre**: primer s'activa `multi-user.target` sencer, i només després el nostre. |
+| `AllowIsolate=yes` | Imprescindible: per defecte un target nou no es pot activar amb `systemctl isolate` ni fer-se target per defecte — cal permetre-ho explícitament. |
+
+> **Captura 1:** contingut del fitxer `/etc/systemd/system/aso.target` (`cat /etc/systemd/system/aso.target`).
+
+**2. Que systemd se n'assabenti:**
+
+```bash
+systemctl daemon-reload
+```
+
+systemd llegeix els fitxers `.service`/`.target` un cop i els guarda en memòria. Si n'afegim o modifiquem un a mà, systemd no se n'entera fins que li diem explícitament que torni a llegir-los.
+
+**3. El provem (target provisional — punt 3.4):**
+
+```bash
+systemctl isolate aso.target
+```
+
+> **Captura 2:** sortida de `systemctl get-default` (encara mostrant l'antic) i `systemctl list-units --type=target` just després de l'`isolate`, per demostrar que `aso.target` ja està actiu encara que no sigui el per defecte.
+
+**4. El fem definitiu (punt 3.5):**
+
+```bash
+systemctl set-default aso.target
+```
+
+> **Captura 3:** `systemctl get-default` mostrant ara `aso.target`.
+
+**5. Hi enganxem el nostre servei** (connecta amb el punt 3.6): al fitxer `.service` que fem servir (veure [3.8](#38-crear-un-nou-servei)), a `[Install]` posem:
+
+```ini
+WantedBy=aso.target
+```
+
+En lloc de `multi-user.target`. Amb `systemctl enable elteuservei.service`, systemd crea l'enllaç a `/etc/systemd/system/aso.target.wants/` — exactament el mateix mecanisme que vam veure amb `ssh.service` i `multi-user.target.wants/` al punt 3.6.
+
+> **Captura 4:** `ls -l /etc/systemd/system/aso.target.wants/` mostrant l'enllaç al nostre servei.
+
+**Resum del flux:**
+
+```
+aso.target (nou, hereta de multi-user.target)
+    └── aso.target.wants/
+          └── elteuservei.service → executa el teu script com a root
+```
+
+> **Captura 5:** després d'un `reboot`, sortida de `systemctl status aso.target` i `systemctl status elteuservei.service` (o `journalctl -u elteuservei`) demostrant que tot s'ha activat automàticament a l'arrencada.
 
 ### 3.8 Crear un nou servei
 
