@@ -377,9 +377,11 @@ Després de reiniciar, `/etc/passwd` hauria d'haver-hi afegit la lletra `a` al f
 3. Modificar el servei perquè executi un script amb permisos de root.
 4. Programar l'script amb el que vulguem i executar-lo manualment per veure si funciona.
 
-El target propi es diu **`ikeraso.target`** i el servei **`ikeraso.service`**.
+Per fer-ho tot identificable com a meu, he batejat el target com **`ikeraso.target`** i el servei com **`ikeraso.service`**. Tot el treball s'ha fet dins una VM d'Ubuntu 26.04 (VirtualBox), tal com es veu al peu de cada captura.
 
-### Pas 1 — Target propi i default
+### Pas 1 — Crear el target propi i fer-lo default
+
+La idea de partida és la del punt [3.7](#37-creem-un-nou-target): un target no s'ha de crear "des de zero" (hauria de reconstruir tota la infraestructura de multiusuari, xarxa, etc.), sinó que n'hereto un que ja existeix. He fet que `ikeraso.target` depengui de `multi-user.target`, que és el mode text normal amb xarxa — així, quan s'activi el meu target, arrossega tot el que ja porta aquell.
 
 ```bash
 sudo nano /etc/systemd/system/ikeraso.target
@@ -393,18 +395,24 @@ After=multi-user.target
 AllowIsolate=yes
 ```
 
+`Requires=` és la dependència en si (el "que en depengui" de l'enunciat), `After=` assegura que primer s'activa `multi-user.target` sencer i després el meu, i `AllowIsolate=yes` és imprescindible perquè, per defecte, un target creat a mà no es pot activar amb `isolate` ni convertir en target per defecte.
+
 ![Creant el fitxer ikeraso.target amb nano]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-nano.png' | relative_url }})
 
 ![Contingut del fitxer ikeraso.target]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-contingut.png' | relative_url }})
 
+Abans de tocar res "de veritat" (el target per defecte de tot el sistema), l'he provat de forma **temporal** amb `isolate`, que no sobreviu a un reinici. Si alguna cosa anés malament, només caldria tornar a fer `isolate` cap al target anterior:
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl isolate ikeraso.target     # prova temporal
-systemctl get-default                     # encara mostra l'antic
+systemctl get-default                     # encara mostra l'antic (graphical.target)
 systemctl list-units --type=target        # ikeraso.target ha de sortir "active"
 ```
 
 ![get-default (antic) i list-units --type=target amb ikeraso.target actiu]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-isolate.png' | relative_url }})
+
+Es veu com `get-default` encara diu `graphical.target` (el canvi és temporal), però `ikeraso.target` ja apareix llistat com `active` — la VM ha tancat la sessió gràfica i m'ha deixat amb un login de consola, perquè el meu target només depèn de `multi-user.target` (mode text), no de `graphical.target`. Un cop comprovat que arrencava bé, l'he fet **definitiu**:
 
 ```bash
 sudo systemctl set-default ikeraso.target
@@ -413,9 +421,11 @@ systemctl get-default                     # ara mostra ikeraso.target
 
 ![set-default creant l'enllaç default.target i get-default confirmant-ho]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-default.png' | relative_url }})
 
-Comprovat també amb un `sudo reboot` real: la màquina arrenca directament amb `ikeraso.target` com a target per defecte.
+Es pot veure com `set-default` no edita cap fitxer de `/lib`, sinó que crea l'enllaç `/etc/systemd/system/default.target → ikeraso.target` — exactament la manera "segura" explicada al punt [3.5](#35-modificant-target-definitiu). Per acabar de comprovar-ho de veritat (no només amb `isolate`), he fet un `sudo reboot` sencer: la màquina arrenca sola amb `ikeraso.target` com a target per defecte, sense haver de tornar a tocar res.
 
-### Pas 2 — Servei dins del target
+### Pas 2 — Crear un servei dins del target
+
+Amb el target ja fet, tocava crear un servei que hi quedés "enganxat". De moment, per centrar-me només en la mecànica de systemd (i deixar l'script real per al pas 3), l'he deixat amb una comanda que no fa res (`/bin/true`):
 
 ```bash
 sudo nano /etc/systemd/system/ikeraso.service
@@ -436,9 +446,13 @@ RemainAfterExit=yes
 WantedBy=ikeraso.target
 ```
 
-> **Captura pendent d'actualitzar:** la primera versió d'aquest fitxer tenia un error (`Requires=ikeraso.targe`, sense la `t` final) — ja corregit a la VM. Cal tornar a fer `cat` del fitxer corregit i substituir aquesta nota per la captura definitiva.
+![Contingut corregit del fitxer ikeraso.service]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-corregit.png' | relative_url }})
 
-`WantedBy=ikeraso.target` (no `multi-user.target`) és el punt clau perquè el servei quedi "dins" del target propi.
+El detall important d'aquest fitxer és `WantedBy=ikeraso.target` a `[Install]`: en lloc del `multi-user.target` genèric de l'exemple del punt [3.8](#38-crear-un-nou-servei), aquí hi poso el **meu** target — és el que fa que el servei quedi dins del meu target i no del de tothom.
+
+> **Un error que vaig cometre i com el vaig trobar:** la primera vegada vaig escriure `Requires=ikeraso.targe` (sense la `t` final, per una relliscada en teclejar). El servei va arrencar igualment i `systemctl status` no mostrava cap error — cosa que confonia, perquè semblava que tot anava bé. El motiu: `.targe` no és una extensió d'unitat vàlida per a systemd, així que la línia es descarta en silenci (un simple avís als logs, no un error que talli l'arrencada). La dependència `Requires=` no s'estava aplicant de veritat, encara que `After=ikeraso.target` (ben escrit) sí que feia efecte. Ho vaig detectar revisant el fitxer amb calma abans de donar el pas per tancat, i la captura de dalt ja és la versió corregida.
+
+Un cop corregit, l'he activat i he comprovat que queda "enganxat" al target:
 
 ```bash
 sudo systemctl daemon-reload
@@ -448,27 +462,31 @@ ls -l /etc/systemd/system/ikeraso.target.wants/
 
 ![enable ikeraso.service i enllaç dins ikeraso.target.wants/]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-wants.png' | relative_url }})
 
+L'enllaç a `ikeraso.target.wants/ikeraso.service` és exactament el mateix mecanisme que vam veure amb `ssh.service` i `multi-user.target.wants/` al punt [3.6](#36-afegirtreure-serveis-del-target) — només que ara amb el meu target en lloc del genèric.
+
 ```bash
 systemctl status ikeraso.service
 ```
 
 ![systemctl status ikeraso.service actiu (exited)]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-status.png' | relative_url }})
 
-> ⚠️ **Compte amb els noms exactes de les unitats:** un error típic és escriure `Requires=ikeraso.targe` (sense la `t` final). Com que `.targe` no és una extensió d'unitat vàlida, systemd ignora la línia en silenci i el servei sembla arrencar bé igualment — però la dependència real no s'aplica. Val la pena revisar el fitxer amb calma abans de donar el pas per bo.
+`active (exited)` vol dir que el procés ha acabat (era `/bin/true`, no fa res i surt immediatament) però systemd el considera "actiu" gràcies a `RemainAfterExit=yes` — el mateix comportament que l'exemple `rc-local.service` del punt 3.8. Ho he tornat a comprovar després d'un reinici sencer i el servei s'inicia sol, sense intervenció manual: quedava demostrat el punt 2 de l'enunciat.
 
-### Pas 3 i 4 — L'script amb permisos root
+### Pas 3 i 4 — Substituir el servei buit per un script real amb permisos de root
 
-**Objectiu de l'script:** aconseguir accés per SSH com a root des del host cap a la VM, sense contrasenya, de manera automàtica cada cop que la VM arrenca — demostrant que el servei s'executa amb privilegis reals de root (només root pot escriure a `/root/.ssh/` i modificar la configuració del servidor SSH).
+Amb el target i el servei ja demostrats, tocava la part que la profe demanava com a "cosa xula": fer que el servei executés un script de veritat, amb permisos de root, abans que acabés d'arrencar el sistema.
 
-L'script (guardat a `/usr/local/bin/ikeraso.sh`, amb permisos d'execució) fa, en resum:
+**L'objectiu que li vaig donar:** aconseguir accés per SSH com a root des del meu host cap a la VM, sense contrasenya, de manera automàtica cada cop que la VM arrenca. M'ha semblat una bona demostració perquè és molt visual (abans no puc entrar, després sí) i perquè només es pot fer amb permisos de root: ni `/root/.ssh/` ni la configuració del servidor SSH (`/etc/ssh/sshd_config`) es poden tocar com a usuari normal.
 
-- Assegura que existeix `/root/.ssh/` amb els permisos correctes.
-- Hi afegeix una clau pública SSH pròpia a `authorized_keys`.
-- Ajusta `/etc/ssh/sshd_config` perquè accepti login de root per clau, i reinicia el servei SSH.
+En resum, l'script (guardat a `/usr/local/bin/ikeraso.sh`, amb permisos d'execució) fa:
 
-> El contingut exacte de l'script no es publica en aquest repositori (és públic a internet vía GitHub Pages) per no deixar una recepta de backdoor a l'abast de qualsevol. Es mostra en local/a classe.
+- Comprova que existeix `/root/.ssh/` amb els permisos correctes (i el crea si no hi és).
+- Hi afegeix una clau pública SSH meva a `authorized_keys`.
+- Ajusta `/etc/ssh/sshd_config` perquè accepti login de root per clau, i reinicia el servei SSH perquè el canvi tingui efecte.
 
-**Prova manual (pas 4 de la profe), abans de lligar-ho al servei:**
+> **Per què no hi ha una captura del codi de l'script:** aquest repositori és públic (es publica amb GitHub Pages), i publicar-hi un script funcional d'accés root per SSH seria deixar una recepta de backdoor a l'abast de qualsevol que trobés la pàgina — no és el mateix ensenyar-lo a la profe en local que penjar-lo obert a internet. El contingut real de l'script el tinc guardat i el puc mostrar directament.
+
+Seguint el punt 4 de l'enunciat, **abans** de lligar-lo al servei, l'he provat manualment a mà:
 
 ```bash
 sudo chmod +x /usr/local/bin/ikeraso.sh
@@ -476,9 +494,9 @@ sudo /usr/local/bin/ikeraso.sh
 cat /root/.ssh/authorized_keys
 ```
 
-> **Captura:** sortida confirmant que la clau s'ha afegit correctament.
+> **Captura pendent:** sortida confirmant que la clau s'ha afegit correctament a `authorized_keys`.
 
-**Un cop provat, es lliga al servei** (pas 3), canviant al `ikeraso.service`:
+Un cop comprovat que funcionava sol, he substituït la línia `ExecStart=/bin/true` del `ikeraso.service` per apuntar al meu script (pas 3 de l'enunciat):
 
 ```ini
 ExecStart=/usr/local/bin/ikeraso.sh
@@ -489,12 +507,12 @@ sudo systemctl daemon-reload
 sudo systemctl restart ikeraso.service
 ```
 
-**Prova final — abans / després d'un reboot, des del host:**
+**La prova final** és la que demostra tot plegat de cop: intentar entrar per SSH des del meu host **abans** de reiniciar amb el servei ja actiu (hauria de fallar o demanar contrasenya) i **després** d'un `sudo reboot` (hauria d'entrar directament, sense demanar res):
 
 ```bash
 ssh -i ~/.ssh/ikeraso_backdoor root@<IP_VM>
 ```
 
-> **Captura 1:** intent de connexió *abans* d'activar el servei (falla / demana contrasenya).
+> **Captura 1 (pendent):** intent de connexió abans del reboot amb el servei actiu.
 >
-> **Captura 2:** connexió *després* del reboot amb el servei actiu — entra directament com a root, sense contrasenya. Aquesta és l'evidència final que l'script s'ha executat amb permisos de root a l'arrencada.
+> **Captura 2 (pendent):** connexió després del reboot — accés directe com a root, sense contrasenya. Aquesta és l'evidència final que l'script s'ha executat amb permisos de root durant l'arrencada, tal com demanava l'enunciat.
