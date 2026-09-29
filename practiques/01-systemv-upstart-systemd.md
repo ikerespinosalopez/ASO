@@ -370,7 +370,7 @@ Després de reiniciar, `/etc/passwd` hauria d'haver-hi afegit la lletra `a` al f
 
 ## Feina (pràctica)
 
-**Enunciat (de la profe):**
+**Enunciat:**
 
 1. Crear un target propi, fer-lo default target i comprovar que hi accedim amb el nostre target.
 2. Crear un servei dins del nostre target i comprovar que s'inicia correctament al reiniciar.
