@@ -393,7 +393,9 @@ After=multi-user.target
 AllowIsolate=yes
 ```
 
-> **Captura:** contingut del fitxer (`cat /etc/systemd/system/ikeraso.target`).
+![Creant el fitxer ikeraso.target amb nano]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-nano.png' | relative_url }})
+
+![Contingut del fitxer ikeraso.target]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-contingut.png' | relative_url }})
 
 ```bash
 sudo systemctl daemon-reload
@@ -402,14 +404,14 @@ systemctl get-default                     # encara mostra l'antic
 systemctl list-units --type=target        # ikeraso.target ha de sortir "active"
 ```
 
-> **Captura:** sortida de `get-default` (antic) + `list-units --type=target` amb `ikeraso.target` actiu.
+![get-default (antic) i list-units --type=target amb ikeraso.target actiu]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-isolate.png' | relative_url }})
 
 ```bash
 sudo systemctl set-default ikeraso.target
 systemctl get-default                     # ara mostra ikeraso.target
 ```
 
-> **Captura:** `set-default` creant l'enllaç `/etc/systemd/system/default.target → ikeraso.target`, i `get-default` confirmant-ho.
+![set-default creant l'enllaç default.target i get-default confirmant-ho]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-target-default.png' | relative_url }})
 
 Comprovat també amb un `sudo reboot` real: la màquina arrenca directament amb `ikeraso.target` com a target per defecte.
 
@@ -434,7 +436,7 @@ RemainAfterExit=yes
 WantedBy=ikeraso.target
 ```
 
-> **Captura:** contingut del fitxer.
+> **Captura pendent d'actualitzar:** la primera versió d'aquest fitxer tenia un error (`Requires=ikeraso.targe`, sense la `t` final) — ja corregit a la VM. Cal tornar a fer `cat` del fitxer corregit i substituir aquesta nota per la captura definitiva.
 
 `WantedBy=ikeraso.target` (no `multi-user.target`) és el punt clau perquè el servei quedi "dins" del target propi.
 
@@ -444,13 +446,13 @@ sudo systemctl enable ikeraso.service
 ls -l /etc/systemd/system/ikeraso.target.wants/
 ```
 
-> **Captura:** l'enllaç a `ikeraso.service` dins `ikeraso.target.wants/`.
+![enable ikeraso.service i enllaç dins ikeraso.target.wants/]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-wants.png' | relative_url }})
 
 ```bash
 systemctl status ikeraso.service
 ```
 
-> **Captura:** `active (exited)`, confirmant que s'inicia sol en arrencar (validat també després d'un reboot).
+![systemctl status ikeraso.service actiu (exited)]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-status.png' | relative_url }})
 
 > ⚠️ **Compte amb els noms exactes de les unitats:** un error típic és escriure `Requires=ikeraso.targe` (sense la `t` final). Com que `.targe` no és una extensió d'unitat vàlida, systemd ignora la línia en silenci i el servei sembla arrencar bé igualment — però la dependència real no s'aplica. Val la pena revisar el fitxer amb calma abans de donar el pas per bo.
 
