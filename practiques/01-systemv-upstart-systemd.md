@@ -379,6 +379,16 @@ Després de reiniciar, `/etc/passwd` hauria d'haver-hi afegit la lletra `a` al f
 
 Per fer-ho tot identificable com a meu, he batejat el target com **`ikeraso.target`** i el servei com **`ikeraso.service`**. Tot el treball s'ha fet dins una VM d'Ubuntu 26.04 (VirtualBox), tal com es veu al peu de cada captura.
 
+**Idea general abans d'entrar en detall:** l'enunciat es resol encadenant tres peces de systemd, cadascuna depenent de l'anterior:
+
+```
+ikeraso.target (hereta de multi-user.target)
+    └── ikeraso.service (WantedBy=ikeraso.target)
+          └── ikeraso.sh (ExecStart, executat com a root)
+```
+
+És a dir: en arrencar la VM, s'activa el meu target (`ikeraso.target`), que activa el meu servei (`ikeraso.service`), que executa el meu script (`ikeraso.sh`) amb permisos de root. L'script fa que, un cop acabada l'arrencada, pugui entrar per SSH a la VM com a root des del meu host, sense contrasenya, sense haver tocat res manualment. Els passos 1-4 de baix són, en ordre, com es munta cada peça d'aquesta cadena.
+
 ### Pas 1 — Crear el target propi i fer-lo default
 
 La idea de partida és la del punt [3.7](#37-creem-un-nou-target): un target no s'ha de crear "des de zero" (hauria de reconstruir tota la infraestructura de multiusuari, xarxa, etc.), sinó que n'hereto un que ja existeix. He fet que `ikeraso.target` depengui de `multi-user.target`, que és el mode text normal amb xarxa — així, quan s'activi el meu target, arrossega tot el que ja porta aquell.
