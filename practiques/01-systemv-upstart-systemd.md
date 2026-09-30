@@ -496,33 +496,64 @@ En resum, l'script (guardat a `/usr/local/bin/ikeraso.sh`, amb permisos d'execuc
 
 > **Per què no hi ha una captura del codi de l'script:** aquest repositori és públic (es publica amb GitHub Pages), i publicar-hi un script funcional d'accés root per SSH seria deixar una recepta de backdoor a l'abast de qualsevol que trobés la pàgina — no és el mateix ensenyar-lo a la profe en local que penjar-lo obert a internet. El contingut real de l'script el tinc guardat i el puc mostrar directament.
 
-Seguint el punt 4 de l'enunciat, **abans** de lligar-lo al servei, l'he provat manualment a mà:
+Seguint el punt 4 de l'enunciat, **abans** de lligar-lo al servei, l'he anat provant manualment a mà — i aquí és on han sortit els problemes de veritat, que documento perquè formen part de l'aprenentatge:
+
+**Primer intent — `ssh.service` no arrencava:**
 
 ```bash
 sudo chmod +x /usr/local/bin/ikeraso.sh
 sudo /usr/local/bin/ikeraso.sh
+```
+
+Al fer `systemctl restart ssh` dins l'script, va fallar amb `Job for ssh.service failed because the control process exited with error code`. Investigant amb `systemctl status ssh.service` i `sudo sshd -t`, l'error real era **`sshd: no hostkeys available`** — no tenia res a veure amb el meu script ni amb el `sed` de `PermitRootLogin`. Com que la meva VM és un **clon** d'una altra, les claus d'amfitrió de `/etc/ssh/` s'havien quedat buides (és habitual que es netegin en clonar, per no duplicar-les entre màquines). Solució:
+
+```bash
+sudo ssh-keygen -A       # regenera totes les claus d'amfitrió que falten
+sudo systemctl restart ssh
+```
+
+Un cop arreglat això, vaig tornar a executar l'script sencer i ja va acabar bé, deixant la clau afegida a `authorized_keys`:
+
+```bash
+sudo /usr/local/bin/ikeraso.sh
 cat /root/.ssh/authorized_keys
 ```
 
-> **Captura pendent:** sortida confirmant que la clau s'ha afegit correctament a `authorized_keys`.
+![Script executat correctament i clau afegida a authorized_keys]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-authorized-keys.png' | relative_url }})
 
-Un cop comprovat que funcionava sol, he substituït la línia `ExecStart=/bin/true` del `ikeraso.service` per apuntar al meu script (pas 3 de l'enunciat):
-
-```ini
-ExecStart=/usr/local/bin/ikeraso.sh
-```
+**Segon problema — no podia arribar a la VM des del host:**
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl restart ikeraso.service
+ssh -i ~/.ssh/ikeraso_backdoor root@10.0.2.15
+# ssh: connect to host 10.0.2.15 port 22: No route to host
 ```
 
-**La prova final** és la que demostra tot plegat de cop: intentar entrar per SSH des del meu host **abans** de reiniciar amb el servei ja actiu (hauria de fallar o demanar contrasenya) i **després** d'un `sudo reboot` (hauria d'entrar directament, sense demanar res):
+La IP `10.0.2.15` és la típica de l'adaptador **NAT** de VirtualBox: només és accessible des de dins la pròpia VM, el host no hi arriba directament. Ho vaig resoldre afegint una **redirecció de port** a la configuració de xarxa de la VM (Configuració → Xarxa → Avançades → Redirecció de ports): host `2222` → convidat `22`. Així, des del host:
 
 ```bash
-ssh -i ~/.ssh/ikeraso_backdoor root@<IP_VM>
+ssh -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1
 ```
 
-> **Captura 1 (pendent):** intent de connexió abans del reboot amb el servei actiu.
->
-> **Captura 2 (pendent):** connexió després del reboot — accés directe com a root, sense contrasenya. Aquesta és l'evidència final que l'script s'ha executat amb permisos de root durant l'arrencada, tal com demanava l'enunciat.
+**Tercer problema (en curs) — la clau s'ofereix però el servidor la rebutja:** amb `ssh -v` es veu que el client ofereix la clau correcta (el fingerprint coincideix amb el generat), però el servidor respon `Authentications that can continue: publickey,password` i acaba demanant contrasenya — és a dir, rebutja la clau i cau cap a l'altra opció. Encara no sé si és per `PermitRootLogin` (potser el `sed` no ha aplicat el valor que tocava, o hi ha un fitxer a `/etc/ssh/sshd_config.d/` que el sobreescriu) o per permisos massa oberts a `/root`, `/root/.ssh` o `authorized_keys`. Ho continuo a la propera sessió (veure pla de la secció següent).
+
+### Estat actual i com continuar
+
+**Fet i verificat:**
+- Pas 1 (target propi + default) ✅
+- Pas 2 (servei enganxat al target, arrenca sol) ✅
+- L'script existeix, s'executa sencer sense errors, i deixa la clau a `authorized_keys` ✅
+- Connexió TCP host → VM funcionant (redirecció de port 2222→22) ✅
+
+**Pendent per la propera sessió:**
+
+1. Diagnosticar per què `sshd` rebutja la clau, dins la VM:
+   ```bash
+   sudo sshd -T | grep -i permitrootlogin
+   sudo sshd -T | grep -i pubkeyauthentication
+   ls -ld /root /root/.ssh
+   ls -l /root/.ssh/authorized_keys
+   ```
+   (`sshd -T` mostra la configuració *efectiva*, després d'aplicar tots els `Include` — útil perquè un fitxer dins `/etc/ssh/sshd_config.d/` pot estar sobreescrivint el que hem posat amb el `sed`.)
+2. Corregir el que calgui (permisos amb `chmod`/`chown`, o la línia `PermitRootLogin` directament amb `nano` si el `sed` no ha fet l'efecte esperat) i tornar a provar `ssh -v -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1` fins que entri sense demanar contrasenya.
+3. **Pas 3 de l'enunciat**, encara pendent: canviar `ExecStart=/bin/true` per `ExecStart=/usr/local/bin/ikeraso.sh` al `ikeraso.service`, i `daemon-reload` + `restart`.
+4. **Prova final:** `sudo reboot` i, un cop tornada a arrencar la VM sense tocar res a mà, repetir la connexió SSH des del host — hauria d'entrar directament. Aquesta és la captura definitiva que tanca la pràctica.
