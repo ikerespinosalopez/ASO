@@ -534,26 +534,81 @@ La IP `10.0.2.15` és la típica de l'adaptador **NAT** de VirtualBox: només é
 ssh -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1
 ```
 
-**Tercer problema (en curs) — la clau s'ofereix però el servidor la rebutja:** amb `ssh -v` es veu que el client ofereix la clau correcta (el fingerprint coincideix amb el generat), però el servidor respon `Authentications that can continue: publickey,password` i acaba demanant contrasenya — és a dir, rebutja la clau i cau cap a l'altra opció. Encara no sé si és per `PermitRootLogin` (potser el `sed` no ha aplicat el valor que tocava, o hi ha un fitxer a `/etc/ssh/sshd_config.d/` que el sobreescriu) o per permisos massa oberts a `/root`, `/root/.ssh` o `authorized_keys`. Ho continuo a la propera sessió (veure pla de la secció següent).
+**Tercer problema — la clau s'ofereix però el servidor la rebutja:** amb `ssh -v` es veu que el client ofereix la clau correcta (el fingerprint coincideix amb el generat), però el servidor respon `Authentications that can continue: publickey,password` i acaba demanant contrasenya. Vaig comprovar `PermitRootLogin` i `PubkeyAuthentication` amb `sshd -T` (la configuració *efectiva*, ja processats tots els `Include`) i els permisos de `/root` i `/root/.ssh` — tot correcte. El següent pas va ser intentar validar la clau directament amb `ssh-keygen -lf /root/.ssh/authorized_keys`, que va respondre:
 
-### Estat actual i com continuar
+```
+/root/.ssh/authorized_keys is not a public key file.
+```
 
-**Fet i verificat:**
-- Pas 1 (target propi + default) ✅
-- Pas 2 (servei enganxat al target, arrenca sol) ✅
-- L'script existeix, s'executa sencer sense errors, i deixa la clau a `authorized_keys` ✅
-- Connexió TCP host → VM funcionant (redirecció de port 2222→22) ✅
+El fitxer tenia una línia amb bon aspecte a simple vista (`cat` i `cat -A` no mostraven res estrany, sense `^M` ni salts de línia trencats), però una comprovació més estricta ho va confirmar del tot: una clau ED25519 vàlida, un cop descodificada de base64, ha de fer exactament 51 bytes.
 
-**Pendent per la propera sessió:**
+```bash
+awk '{print $2}' /root/.ssh/authorized_keys | base64 -d | wc -c
+# base64: error: invalid input
+```
 
-1. Diagnosticar per què `sshd` rebutja la clau, dins la VM:
-   ```bash
-   sudo sshd -T | grep -i permitrootlogin
-   sudo sshd -T | grep -i pubkeyauthentication
-   ls -ld /root /root/.ssh
-   ls -l /root/.ssh/authorized_keys
-   ```
-   (`sshd -T` mostra la configuració *efectiva*, després d'aplicar tots els `Include` — útil perquè un fitxer dins `/etc/ssh/sshd_config.d/` pot estar sobreescrivint el que hem posat amb el `sed`.)
-2. Corregir el que calgui (permisos amb `chmod`/`chown`, o la línia `PermitRootLogin` directament amb `nano` si el `sed` no ha fet l'efecte esperat) i tornar a provar `ssh -v -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1` fins que entri sense demanar contrasenya.
-3. **Pas 3 de l'enunciat**, encara pendent: canviar `ExecStart=/bin/true` per `ExecStart=/usr/local/bin/ikeraso.sh` al `ikeraso.service`, i `daemon-reload` + `restart`.
-4. **Prova final:** `sudo reboot` i, un cop tornada a arrencar la VM sense tocar res a mà, repetir la connexió SSH des del host — hauria d'entrar directament. Aquesta és la captura definitiva que tanca la pràctica.
+La clau estava corrupta: com que no podia enganxar-la directament a la VM (el porta-retalls compartit de VirtualBox no em funcionava), l'havia anat copiant **a mà**, caràcter per caràcter, des d'una captura — i en un bloc de ~70 caràcters (majúscules, minúscules i números barrejats, tipus `l`/`I`/`1` o `O`/`0`) n'hi havia com a mínim un de mal escrit. Visualment era gairebé impossible de detectar.
+
+**La solució definitiva** va ser deixar de copiar-la a mà i transferir el fitxer tal qual amb `scp`, aprofitant que el meu usuari normal (`iker`, a diferència de `root`) sí que pot entrar per contrasenya:
+
+```bash
+# des del host:
+scp -P 2222 ~/.ssh/ikeraso_backdoor.pub iker@127.0.0.1:~/clau.pub
+```
+
+```bash
+# dins la VM:
+sudo mkdir -p /root/.ssh
+sudo cp ~/clau.pub /root/.ssh/authorized_keys
+sudo chown root:root /root/.ssh/authorized_keys
+sudo chmod 700 /root/.ssh
+sudo chmod 600 /root/.ssh/authorized_keys
+rm ~/clau.pub
+
+awk '{print $2}' /root/.ssh/authorized_keys | base64 -d | wc -c
+# 51 → ara sí, clau vàlida
+```
+
+Amb la clau ja bona, la connexió va funcionar a la primera.
+
+### Pas 3 — Lligar l'script al servei (definitiu)
+
+Amb l'script validat manualment, l'últim pas va ser substituir `ExecStart=/bin/true` per l'script real:
+
+```ini
+ExecStart=/usr/local/bin/ikeraso.sh
+```
+
+![ikeraso.service final, amb ExecStart apuntant a ikeraso.sh]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-final.png' | relative_url }})
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ikeraso.service
+systemctl status ikeraso.service    # active (exited)
+```
+
+### Prova final
+
+`sudo reboot`, i sense tocar absolutament res més un cop tornada a arrencar la VM, connexió des del host:
+
+```bash
+ssh -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1
+```
+
+![Login SSH com a root, sense contrasenya, just després d'un reboot sencer]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-ssh-final.png' | relative_url }})
+
+Accés directe com a `root@iker-ubuntu`, sense contrasenya, immediatament després d'un reinici complet i sense cap intervenció manual. Això tanca els 4 punts de l'enunciat: target propi i per defecte (1), servei enganxat que arrenca sol (2), servei modificat per executar un script amb permisos de root (3), i script provat i funcionant, demostrat amb una utilitat real i visible (4).
+
+### Resum de la cadena completa
+
+```
+arrencada de la VM
+  └── ikeraso.target (default target, hereta de multi-user.target)
+        └── ikeraso.service (WantedBy=ikeraso.target, Type=oneshot)
+              └── /usr/local/bin/ikeraso.sh (root)
+                    └── afegeix clau a /root/.ssh/authorized_keys
+                    └── configura sshd_config i reinicia ssh
+  └── resultat: accés SSH com a root des del host, sense contrasenya
+```
+
+**El problema més interessant de tota la pràctica** no va ser de systemd, sinó de transcripció: una clau SSH pública es veu com un bloc de text pla i sembla fàcil de copiar a mà, però un sol caràcter mal llegit la invalida sencera sense donar cap pista visual — calen eines de verificació (`ssh-keygen -lf`, comptar bytes després de `base64 -d`) per confiar-hi de debò, en lloc de fiar-se de l'ull.
