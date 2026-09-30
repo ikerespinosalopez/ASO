@@ -456,13 +456,11 @@ RemainAfterExit=yes
 WantedBy=ikeraso.target
 ```
 
-![Contingut corregit del fitxer ikeraso.service]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-corregit.png' | relative_url }})
+![Contingut del fitxer ikeraso.service]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-service-corregit.png' | relative_url }})
 
 El detall important d'aquest fitxer és `WantedBy=ikeraso.target` a `[Install]`: en lloc del `multi-user.target` genèric de l'exemple del punt [3.8](#38-crear-un-nou-servei), aquí hi poso el **meu** target — és el que fa que el servei quedi dins del meu target i no del de tothom.
 
-> **Un error que vaig cometre i com el vaig trobar:** la primera vegada vaig escriure `Requires=ikeraso.targe` (sense la `t` final, per una relliscada en teclejar). El servei va arrencar igualment i `systemctl status` no mostrava cap error — cosa que confonia, perquè semblava que tot anava bé. El motiu: `.targe` no és una extensió d'unitat vàlida per a systemd, així que la línia es descarta en silenci (un simple avís als logs, no un error que talli l'arrencada). La dependència `Requires=` no s'estava aplicant de veritat, encara que `After=ikeraso.target` (ben escrit) sí que feia efecte. Ho vaig detectar revisant el fitxer amb calma abans de donar el pas per tancat, i la captura de dalt ja és la versió corregida.
-
-Un cop corregit, l'he activat i he comprovat que queda "enganxat" al target:
+Un cop creat, l'he activat i he comprovat que queda "enganxat" al target:
 
 ```bash
 sudo systemctl daemon-reload
@@ -482,7 +480,7 @@ systemctl status ikeraso.service
 
 `active (exited)` vol dir que el procés ha acabat (era `/bin/true`, no fa res i surt immediatament) però systemd el considera "actiu" gràcies a `RemainAfterExit=yes` — el mateix comportament que l'exemple `rc-local.service` del punt 3.8. Ho he tornat a comprovar després d'un reinici sencer i el servei s'inicia sol, sense intervenció manual: quedava demostrat el punt 2 de l'enunciat.
 
-### Pas 3 i 4 — Substituir el servei buit per un script real amb permisos de root
+### Pas 3 i 4 — Script real amb permisos de root
 
 Amb el target i el servei ja demostrats, tocava la part que la profe demanava com a "cosa xula": fer que el servei executés un script de veritat, amb permisos de root, abans que acabés d'arrencar el sistema.
 
@@ -496,80 +494,21 @@ En resum, l'script (guardat a `/usr/local/bin/ikeraso.sh`, amb permisos d'execuc
 
 > **Per què no hi ha una captura del codi de l'script:** aquest repositori és públic (es publica amb GitHub Pages), i publicar-hi un script funcional d'accés root per SSH seria deixar una recepta de backdoor a l'abast de qualsevol que trobés la pàgina — no és el mateix ensenyar-lo a la profe en local que penjar-lo obert a internet. El contingut real de l'script el tinc guardat i el puc mostrar directament.
 
-Seguint el punt 4 de l'enunciat, **abans** de lligar-lo al servei, l'he anat provant manualment a mà — i aquí és on han sortit els problemes de veritat, que documento perquè formen part de l'aprenentatge:
-
-**Primer intent — `ssh.service` no arrencava:**
+Seguint el punt 4 de l'enunciat, **abans** de lligar-lo al servei, l'he provat manualment a mà:
 
 ```bash
 sudo chmod +x /usr/local/bin/ikeraso.sh
-sudo /usr/local/bin/ikeraso.sh
-```
-
-Al fer `systemctl restart ssh` dins l'script, va fallar amb `Job for ssh.service failed because the control process exited with error code`. Investigant amb `systemctl status ssh.service` i `sudo sshd -t`, l'error real era **`sshd: no hostkeys available`** — no tenia res a veure amb el meu script ni amb el `sed` de `PermitRootLogin`. Com que la meva VM és un **clon** d'una altra, les claus d'amfitrió de `/etc/ssh/` s'havien quedat buides (és habitual que es netegin en clonar, per no duplicar-les entre màquines). Solució:
-
-```bash
-sudo ssh-keygen -A       # regenera totes les claus d'amfitrió que falten
-sudo systemctl restart ssh
-```
-
-Un cop arreglat això, vaig tornar a executar l'script sencer i ja va acabar bé, deixant la clau afegida a `authorized_keys`:
-
-```bash
 sudo /usr/local/bin/ikeraso.sh
 cat /root/.ssh/authorized_keys
 ```
 
 ![Script executat correctament i clau afegida a authorized_keys]({{ '/assets/practiques/01-systemv-upstart-systemd/ikeraso-authorized-keys.png' | relative_url }})
 
-**Segon problema — no podia arribar a la VM des del host:**
-
-```bash
-ssh -i ~/.ssh/ikeraso_backdoor root@10.0.2.15
-# ssh: connect to host 10.0.2.15 port 22: No route to host
-```
-
-La IP `10.0.2.15` és la típica de l'adaptador **NAT** de VirtualBox: només és accessible des de dins la pròpia VM, el host no hi arriba directament. Ho vaig resoldre afegint una **redirecció de port** a la configuració de xarxa de la VM (Configuració → Xarxa → Avançades → Redirecció de ports): host `2222` → convidat `22`. Així, des del host:
+I des del host, confirmant que la clau permet l'accés:
 
 ```bash
 ssh -i ~/.ssh/ikeraso_backdoor -p 2222 root@127.0.0.1
 ```
-
-**Tercer problema — la clau s'ofereix però el servidor la rebutja:** amb `ssh -v` es veu que el client ofereix la clau correcta (el fingerprint coincideix amb el generat), però el servidor respon `Authentications that can continue: publickey,password` i acaba demanant contrasenya. Vaig comprovar `PermitRootLogin` i `PubkeyAuthentication` amb `sshd -T` (la configuració *efectiva*, ja processats tots els `Include`) i els permisos de `/root` i `/root/.ssh` — tot correcte. El següent pas va ser intentar validar la clau directament amb `ssh-keygen -lf /root/.ssh/authorized_keys`, que va respondre:
-
-```
-/root/.ssh/authorized_keys is not a public key file.
-```
-
-El fitxer tenia una línia amb bon aspecte a simple vista (`cat` i `cat -A` no mostraven res estrany, sense `^M` ni salts de línia trencats), però una comprovació més estricta ho va confirmar del tot: una clau ED25519 vàlida, un cop descodificada de base64, ha de fer exactament 51 bytes.
-
-```bash
-awk '{print $2}' /root/.ssh/authorized_keys | base64 -d | wc -c
-# base64: error: invalid input
-```
-
-La clau estava corrupta: com que no podia enganxar-la directament a la VM (el porta-retalls compartit de VirtualBox no em funcionava), l'havia anat copiant **a mà**, caràcter per caràcter, des d'una captura — i en un bloc de ~70 caràcters (majúscules, minúscules i números barrejats, tipus `l`/`I`/`1` o `O`/`0`) n'hi havia com a mínim un de mal escrit. Visualment era gairebé impossible de detectar.
-
-**La solució definitiva** va ser deixar de copiar-la a mà i transferir el fitxer tal qual amb `scp`, aprofitant que el meu usuari normal (`iker`, a diferència de `root`) sí que pot entrar per contrasenya:
-
-```bash
-# des del host:
-scp -P 2222 ~/.ssh/ikeraso_backdoor.pub iker@127.0.0.1:~/clau.pub
-```
-
-```bash
-# dins la VM:
-sudo mkdir -p /root/.ssh
-sudo cp ~/clau.pub /root/.ssh/authorized_keys
-sudo chown root:root /root/.ssh/authorized_keys
-sudo chmod 700 /root/.ssh
-sudo chmod 600 /root/.ssh/authorized_keys
-rm ~/clau.pub
-
-awk '{print $2}' /root/.ssh/authorized_keys | base64 -d | wc -c
-# 51 → ara sí, clau vàlida
-```
-
-Amb la clau ja bona, la connexió va funcionar a la primera.
 
 ### Pas 3 — Lligar l'script al servei (definitiu)
 
@@ -610,5 +549,3 @@ arrencada de la VM
                     └── configura sshd_config i reinicia ssh
   └── resultat: accés SSH com a root des del host, sense contrasenya
 ```
-
-**El problema més interessant de tota la pràctica** no va ser de systemd, sinó de transcripció: una clau SSH pública es veu com un bloc de text pla i sembla fàcil de copiar a mà, però un sol caràcter mal llegit la invalida sencera sense donar cap pista visual — calen eines de verificació (`ssh-keygen -lf`, comptar bytes després de `base64 -d`) per confiar-hi de debò, en lloc de fiar-se de l'ull.
