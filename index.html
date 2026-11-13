@@ -28,6 +28,29 @@
       <p class="subtitle">Apunts, pràctiques i exercicis de l'assignatura d'Administració de Sistemes Operatius.</p>
     </header>
 
+  </div>
+
+  <section class="scrollworld" id="scrollworld">
+    <div class="scrollworld-sticky">
+      <canvas id="sw-canvas"></canvas>
+      <div class="sw-caption" id="sw-caption-0">
+        <span class="sw-num">01</span>
+        <h3>Sistemes d'inici</h3>
+      </div>
+      <div class="sw-caption" id="sw-caption-1">
+        <span class="sw-num">02</span>
+        <h3>Serveis a Windows</h3>
+      </div>
+      <div class="sw-caption" id="sw-caption-2">
+        <span class="sw-num">03</span>
+        <h3>Entitat certificadora</h3>
+      </div>
+      <div class="sw-hint">desplaça't avall ↓</div>
+    </div>
+  </section>
+
+  <div class="wrap">
+
     <div class="section-label">$ ls practiques/</div>
     <div class="cards">
       <a class="card" href="practiques/01-systemv-upstart-systemd.html">
@@ -69,5 +92,104 @@
     </footer>
 
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js"></script>
+  <script>
+  (function(){
+    var canvas = document.getElementById('sw-canvas');
+    if(!canvas || !window.THREE) return;
+    var section = document.getElementById('scrollworld');
+
+    var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    camera.position.set(0, 0, 8);
+
+    scene.add(new THREE.AmbientLight(0xffe9c9, 0.6));
+    var light1 = new THREE.PointLight(0xc1595c, 3, 40); light1.position.set(3, 2, 6); scene.add(light1);
+    var light2 = new THREE.PointLight(0xc9a227, 2, 40); light2.position.set(-3, -2, -8); scene.add(light2);
+    var light3 = new THREE.PointLight(0x7f9c82, 2, 40); light3.position.set(0, 3, -24); scene.add(light3);
+
+    var colors = [0xc1595c, 0xc9a227, 0x7f9c82];
+    var geometries = [
+      new THREE.IcosahedronGeometry(1.5, 0),
+      new THREE.OctahedronGeometry(1.6, 0),
+      new THREE.TorusKnotGeometry(1, 0.32, 130, 16)
+    ];
+    var zPositions = [0, -16, -32];
+    var xPositions = [0, -2.2, 2.2];
+    var meshes = [];
+
+    for (var i = 0; i < 3; i++) {
+      var material = new THREE.MeshStandardMaterial({
+        color: colors[i], roughness: 0.35, metalness: 0.5,
+        emissive: colors[i], emissiveIntensity: 0.18
+      });
+      var mesh = new THREE.Mesh(geometries[i], material);
+      mesh.position.set(xPositions[i], 0, zPositions[i]);
+      scene.add(mesh);
+
+      var wire = new THREE.Mesh(
+        geometries[i],
+        new THREE.MeshBasicMaterial({color: colors[i], wireframe: true, transparent: true, opacity: 0.25})
+      );
+      wire.position.copy(mesh.position);
+      wire.scale.setScalar(1.04);
+      scene.add(wire);
+
+      meshes.push(mesh);
+    }
+
+    var captions = [0, 1, 2].map(function(i){ return document.getElementById('sw-caption-' + i); });
+    var hint = document.querySelector('.sw-hint');
+
+    function resize(){
+      var w = canvas.clientWidth, h = canvas.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function onScroll(){
+      var rect = section.getBoundingClientRect();
+      var total = section.offsetHeight - window.innerHeight;
+      var progress = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 0;
+      var camZ = 8 - progress * 44;
+
+      camera.position.z = camZ;
+      camera.position.x = Math.sin(progress * Math.PI * 2) * 0.7;
+      camera.position.y = Math.cos(progress * Math.PI * 1.3) * 0.3;
+      camera.lookAt(0, 0, camZ - 6);
+
+      var nearestIdx = 0, nearestDist = Infinity;
+      meshes.forEach(function(m, idx){
+        var d = Math.abs(m.position.z - camZ);
+        if (d < nearestDist) { nearestDist = d; nearestIdx = idx; }
+      });
+      captions.forEach(function(c, idx){
+        if (c) c.classList.toggle('active', idx === nearestIdx && nearestDist < 9);
+      });
+      if (hint) hint.classList.toggle('hidden', progress > 0.05);
+    }
+
+    function animate(){
+      meshes.forEach(function(m, i){
+        m.rotation.x += 0.002 + i * 0.0006;
+        m.rotation.y += 0.003;
+      });
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('scroll', onScroll, {passive: true});
+    resize();
+    onScroll();
+    animate();
+  })();
+  </script>
 </body>
 </html>
