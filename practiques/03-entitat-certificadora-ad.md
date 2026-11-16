@@ -571,3 +571,39 @@ Al final de la pràctica cal lliurar les captures numerades. Les dels **reptes**
 > `![text alternatiu]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }})`
 
 **No esborris res.** Fes una instantània de les dues màquines amb el nom *Web amb HTTPS*: ho necessitaràs tot a la 2a part, *Carnets digitals per a l'equip*.
+
+---
+
+## Resultats dels reptes
+
+Captures reals dels reptes de l'enunciat (1b–7b), fetes al laboratori.
+
+**Repte 0 (1b)** — DNS: la zona `orbita.cat` amb els registres `dc-orbita`, `control` i `PC-CONTROL`, i els reenviadors `10.0.2.1` i `8.8.8.8`.
+
+![1b — zona orbita.cat]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-zona.png' | relative_url }})
+
+![1b — reenviadors DNS]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-reenviadors.png' | relative_url }})
+
+**Repte 1 (2b)** — la ruta de certificació d'ORBITA-CA només té un nivell: és la CA arrel.
+
+![2b — ruta de certificació d'un sol nivell]({{ '/assets/practiques/03-entitat-certificadora-ad/captura2b.png' | relative_url }})
+
+**Repte 2 (3b)** — `control.orbita.cat`, `10.0.2.6` i `dc-orbita.orbita.cat`: tres noms, la mateixa web.
+
+![3b — tres pestanyes amb la mateixa web]({{ '/assets/practiques/03-entitat-certificadora-ad/captura3b.png' | relative_url }})
+
+**Repte 3 (4b)** — un certificat fals per a `www.google.com`: el subjecte i l'emissor són el mateix (se signa ell mateix). Tenir-lo no et converteix en Google; després s'esborra.
+
+![4b — Google de mentida, subjecte = emissor]({{ '/assets/practiques/03-entitat-certificadora-ad/captura4b.png' | relative_url }})
+
+**Repte 4 (5b)** — a la plantilla WebServer-SAN, *Extensiones › Directivas de aplicación* = **Autenticación del servidor**: serveix per identificar un servidor, no per signar scripts.
+
+![5b — Directivas de aplicación: Autenticación del servidor]({{ '/assets/practiques/03-entitat-certificadora-ad/captura5b.png' | relative_url }})
+
+**Repte 5 (6b)** — al certificat emès, el camp *Nombre alternativo del titular* (SAN) conté `Nombre DNS=control.orbita.cat`.
+
+![6b — el SAN del certificat emès]({{ '/assets/practiques/03-entitat-certificadora-ad/captura6b.png' | relative_url }})
+
+**Repte 6 (7b)** — `https://dc-orbita.orbita.cat` dona **NET::ERR_CERT_COMMON_NAME_INVALID**. El certificat és oficial i de confiança, però el nom no és al SAN (només hi ha `control.orbita.cat`). És la condició 3 de la cadena de confiança: el nom ha de coincidir.
+
+![7b — error de nom (ERR_CERT_COMMON_NAME_INVALID)]({{ '/assets/practiques/03-entitat-certificadora-ad/captura7b.png' | relative_url }})
