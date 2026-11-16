@@ -3,9 +3,12 @@ layout: default
 title: "Entitat certificadora amb Active Directory"
 description: "Muntar una CA empresarial arrel (ORBITA-CA) amb AD CS i donar HTTPS amb cadenat oficial a una web interna. Certificats, plantilles SAN, CSR i cadena de confiança."
 last_updated: 2026-11-16
+number: "03"
+mission: "Munta l'entitat certificadora ORBITA-CA amb AD CS i dóna HTTPS amb cadenat oficial a la web del centre de control."
+machines: "DC-ORBITA · PC-CONTROL"
+captures: "7 captures + 7 reptes"
 ---
 
-# Entitat certificadora amb Active Directory
 
 > **Missió Confiança · 1a part · La web amb HTTPS · Windows Server**
 >
@@ -593,12 +596,6 @@ Al final de la pràctica cal lliurar les captures numerades. Les dels **reptes**
 | **6b** | SERVIDOR | *Certificados emitidos* amb el camp DNS `control.orbita.cat` (repte 5) |
 | **7** | CLIENT | Edge amb cadenat i visor amb jerarquia ORBITA-CA › `control.orbita.cat` (nivell 6) |
 | **7b** | CLIENT | Avís en obrir els altres dos noms per HTTPS (repte 6) |
-
-> Les imatges van a `assets/practiques/03-entitat-certificadora-ad/`. Per enllaçar-les al document, el patró és:
-> `<figure>
-  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }}" alt="text alternatiu" loading="lazy">
-  <figcaption>text alternatiu</figcaption>
-</figure>`
 
 **No esborris res.** Fes una instantània de les dues màquines amb el nom *Web amb HTTPS*: ho necessitaràs tot a la 2a part, *Carnets digitals per a l'equip*.
 

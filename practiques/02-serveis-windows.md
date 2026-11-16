@@ -3,9 +3,12 @@ layout: default
 title: "Serveis personalitzats a Windows"
 description: "Crear un servei de Windows que executi un script amb NSSM, i desactivar un servei innecessari."
 last_updated: 2026-10-27
+number: "02"
+mission: "Converteix un script en un servei de Windows amb NSSM i desactiva un servei que no calgui."
+machines: "Windows 10/11"
+captures: "pendents"
 ---
 
-# Serveis personalitzats a Windows
 
 ## <a id="index"></a>Índex
 

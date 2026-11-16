@@ -3,9 +3,12 @@ layout: default
 title: "Sistemes d'inici"
 description: "SystemV vs Upstart vs Systemd: runlevels, targets, directoris, systemctl i gestió de serveis."
 last_updated: 2026-09-23
+number: "01"
+mission: "Compara SystemV, Upstart i systemd, i crea un target i un servei propis que s'executen sols a l'arrencada."
+machines: "Ubuntu 26.04 (VirtualBox)"
+captures: "6 captures"
 ---
 
-# Sistemes d'inici
 
 ## <a id="index"></a>Índex
 

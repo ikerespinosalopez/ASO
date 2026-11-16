@@ -33,7 +33,18 @@
 
     <main class="doc-main">
       <article class="content">
-        {% if page.last_updated %}
+        {% if page.mission %}
+        <header class="mission">
+          <div class="m-eyebrow"><span class="m-num">Pràctica {{ page.number }}</span> · Administració de Sistemes Operatius</div>
+          <h1>{{ page.title }}</h1>
+          <p class="m-line">{{ page.mission }}</p>
+          <div class="m-meta">
+            {% if page.machines %}<span class="m-tag">🖥 <b>{{ page.machines }}</b></span>{% endif %}
+            {% if page.captures %}<span class="m-tag">📸 <b>{{ page.captures }}</b></span>{% endif %}
+            {% if page.last_updated %}<span class="m-tag">actualitzat {{ page.last_updated | date: "%d/%m/%Y" }}</span>{% endif %}
+          </div>
+        </header>
+        {% elsif page.last_updated %}
         <div class="last-updated">Última actualització: {{ page.last_updated | date: "%d/%m/%Y" }}</div>
         {% endif %}
         {{ content }}
@@ -128,6 +139,64 @@
       });
       pre.appendChild(btn);
     });
+  })();
+  </script>
+  <script>
+  (function(){
+    var content = document.querySelector('.content');
+    if(!content) return;
+
+    content.querySelectorAll('blockquote').forEach(function(bq){
+      var p = bq.querySelector('p');
+      var txt = (bq.textContent||'').trim();
+      function set(k,l){ bq.setAttribute('data-kind',k); bq.setAttribute('data-label',l); }
+      if(/^\s*💡/.test(txt)){ set('idea','idea clau'); if(p) p.innerHTML=p.innerHTML.replace(/^\s*💡️?\s*/,''); }
+      else if(/^\s*⚠/.test(txt)){ set('avis','compte'); if(p) p.innerHTML=p.innerHTML.replace(/^\s*⚠️?\s*/,''); }
+      else if(/^\s*\**\s*Repte/i.test(txt)){ set('repte','repte'); }
+      else if(/^\s*\**\s*Captura/i.test(txt)){ set('captura','captura'); }
+      else if(/pista/i.test(txt.slice(0,20))){ set('pista','pista'); }
+    });
+
+    content.querySelectorAll('pre').forEach(function(pre){
+      if(pre.closest('.code-block')) return;
+      var code = pre.querySelector('code');
+      var lang = (((code&&code.className)||'').match(/language-([\w-]+)/)||[])[1]||'';
+      var isTerm = /^(powershell|pwsh|bash|sh|shell|console)$/.test(lang);
+      var wrap=document.createElement('div'); wrap.className='code-block';
+      var label;
+      if(isTerm){ wrap.classList.add('is-term'); if(/bash|sh/.test(lang)) wrap.classList.add('sh'); label=(/bash|sh/.test(lang)?'bash':'PowerShell'); }
+      else { wrap.classList.add('is-file'); var fn=(pre.innerText.split('\n')[0].match(/[\w.-]+\.(ps1|inf|html|conf|cfg|txt|xml|yml|ini)/i)||[])[0]; label=fn||(lang?lang.toUpperCase():'fitxer'); }
+      pre.parentNode.insertBefore(wrap,pre);
+      var head=document.createElement('div'); head.className='code-head';
+      head.innerHTML='<span class="code-dots"><i></i><i></i><i></i></span><span class="code-label">'+label+'</span>';
+      wrap.appendChild(head); wrap.appendChild(pre);
+    });
+
+    content.querySelectorAll('strong,b').forEach(function(el){
+      var t=(el.textContent||'').trim().toUpperCase();
+      if(t==='SERVIDOR') el.classList.add('machine-chip','servidor');
+      else if(t==='CLIENT') el.classList.add('machine-chip','client');
+    });
+
+    content.querySelectorAll('h2,h3').forEach(function(h){
+      var m=(h.textContent||'').match(/^\s*Nivell\s+(\d+)/i);
+      if(m){ h.classList.add('nivell'); var b=document.createElement('span'); b.className='niv-badge'; b.textContent=m[1]; h.insertBefore(b,h.firstChild); }
+    });
+
+    var lb=document.createElement('div'); lb.className='lightbox';
+    lb.innerHTML='<span class="lb-close">×</span><img alt=""><div class="lb-cap"></div>';
+    document.body.appendChild(lb);
+    var lbImg=lb.querySelector('img'), lbCap=lb.querySelector('.lb-cap');
+    content.querySelectorAll('figure img').forEach(function(img){
+      img.style.cursor='zoom-in';
+      img.addEventListener('click',function(){
+        lbImg.src=img.currentSrc||img.src;
+        var fig=img.closest('figure'); var cap=fig&&fig.querySelector('figcaption');
+        lbCap.textContent=cap?cap.textContent:''; lb.classList.add('open');
+      });
+    });
+    lb.addEventListener('click',function(){ lb.classList.remove('open'); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') lb.classList.remove('open'); });
   })();
   </script>
 </body>
