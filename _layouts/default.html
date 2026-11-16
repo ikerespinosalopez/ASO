@@ -157,25 +157,42 @@
       else if(/pista/i.test(txt.slice(0,20))){ set('pista','pista'); }
     });
 
-    content.querySelectorAll('pre').forEach(function(pre){
-      if(pre.closest('.code-block')) return;
-      var code = pre.querySelector('code');
-      var lang = (((code&&code.className)||'').match(/language-([\w-]+)/)||[])[1]||'';
-      var isTerm = /^(powershell|pwsh|bash|sh|shell|console)$/.test(lang);
-      var wrap=document.createElement('div'); wrap.className='code-block';
-      var label;
-      if(isTerm){ wrap.classList.add('is-term'); if(/bash|sh/.test(lang)) wrap.classList.add('sh'); label=(/bash|sh/.test(lang)?'bash':'PowerShell'); }
-      else { wrap.classList.add('is-file'); var fn=(pre.innerText.split('\n')[0].match(/[\w.-]+\.(ps1|inf|html|conf|cfg|txt|xml|yml|ini)/i)||[])[0]; label=fn||(lang?lang.toUpperCase():'fitxer'); }
-      pre.parentNode.insertBefore(wrap,pre);
-      var head=document.createElement('div'); head.className='code-head';
-      head.innerHTML='<span class="code-dots"><i></i><i></i><i></i></span><span class="code-label">'+label+'</span>';
-      wrap.appendChild(head); wrap.appendChild(pre);
-    });
+    (function(){
+      var blocks=[];
+      content.querySelectorAll('div.highlighter-rouge').forEach(function(d){
+        blocks.push({el:d, lang:((d.className.match(/language-([\w-]+)/)||[])[1]||''), pre:d.querySelector('pre')});
+      });
+      content.querySelectorAll('pre').forEach(function(pre){
+        if(pre.closest('.highlighter-rouge')||pre.closest('.code-block')) return;
+        var code=pre.querySelector('code');
+        blocks.push({el:pre, lang:(((code&&code.className)||'').match(/language-([\w-]+)/)||[])[1]||'', pre:pre});
+      });
+      blocks.forEach(function(b){
+        if(!b.el||b.el.classList.contains('code-block')) return;
+        var lang=b.lang;
+        var isTerm=/^(powershell|pwsh|bash|sh|shell|console)$/.test(lang);
+        b.el.classList.add('code-block');
+        var label;
+        if(isTerm){ b.el.classList.add('is-term'); if(/bash|sh/.test(lang)) b.el.classList.add('sh'); label=(/bash|sh/.test(lang)?'bash':'PowerShell'); }
+        else {
+          b.el.classList.add('is-file');
+          var first=b.pre?b.pre.innerText.split('\n')[0]:'';
+          var fn=(first.match(/[\w.-]+\.(ps1|inf|html|conf|cfg|txt|xml|yml|ini)/i)||[])[0];
+          label=fn||((lang&&lang!=='plaintext')?lang.toUpperCase():'codi');
+        }
+        var head=document.createElement('div'); head.className='code-head';
+        head.innerHTML='<span class="code-dots"><i></i><i></i><i></i></span><span class="code-label">'+label+'</span>';
+        b.el.insertBefore(head, b.el.firstChild);
+      });
+    })();
 
     content.querySelectorAll('strong,b').forEach(function(el){
-      var t=(el.textContent||'').trim().toUpperCase();
-      if(t==='SERVIDOR') el.classList.add('machine-chip','servidor');
-      else if(t==='CLIENT') el.classList.add('machine-chip','client');
+      var t=(el.textContent||'').trim();
+      var m=t.match(/^(SERVIDOR|CLIENT)\b/i);
+      if(m && !el.querySelector('.machine-chip')){
+        var kind=(m[1].toUpperCase()==='SERVIDOR')?'servidor':'client';
+        el.innerHTML=el.innerHTML.replace(/^(\s*)(SERVIDOR|CLIENT)/i,'$1<span class="machine-chip '+kind+'">$2</span>');
+      }
     });
 
     content.querySelectorAll('h2,h3').forEach(function(h){
