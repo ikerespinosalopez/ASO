@@ -401,3 +401,27 @@ footer a:hover{color:var(--accent);border-color:var(--accent);}
   background:var(--bg-panel);
   color:var(--muted);
 }
+
+/* ---- Captures de pràctica (figures centrades amb títol) ---- */
+.content figure{
+  margin:30px auto;
+  text-align:center;
+  max-width:100%;
+}
+.content figure img{
+  display:block;
+  margin:0 auto;
+  max-width:100%;
+  height:auto;
+  border:1px solid var(--border-solid);
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
+}
+.content figcaption{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:0.82rem;
+  font-style:italic;
+  line-height:1.45;
+}
+.content img{max-width:100%;height:auto;}

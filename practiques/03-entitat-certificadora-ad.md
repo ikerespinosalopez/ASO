@@ -171,7 +171,10 @@ Les dues `nslookup` han de donar adreça. `UnKnown` com a nom del servidor és n
 
 > **Captura 1:** al client, la sortida de `whoami` i dels dos `nslookup`.
 
-![Captura 1 — whoami i nslookup al client]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }}" alt="Captura 1 — whoami i nslookup al client" loading="lazy">
+  <figcaption>Captura 1 — whoami i nslookup al client</figcaption>
+</figure>
 
 > **Repte 0 (captura 1b):** al servidor, obre l'*Administrador de DNS* i fes una captura on es vegin els reenviadors i la zona `orbita.cat` amb el registre de `dc-orbita`. Després fes la instantània de les dues màquines.
 
@@ -233,11 +236,17 @@ Les dues `nslookup` han de donar adreça. `UnKnown` com a nom del servidor és n
 
 > **Captura 2:** la consola `certsrv.msc` del servidor amb ORBITA-CA, i el `certlm.msc` del client amb ORBITA-CA dins de les entitats arrel de confiança.
 
-![Captura 2 — certsrv.msc al servidor amb ORBITA-CA]({{ '/assets/practiques/03-entitat-certificadora-ad/captura2-servidor.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura2-servidor.png' | relative_url }}" alt="Captura 2 — certsrv.msc al servidor amb ORBITA-CA" loading="lazy">
+  <figcaption>Captura 2 — certsrv.msc al servidor amb ORBITA-CA</figcaption>
+</figure>
 
 Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola per AD, amb la mateixa empremta digital que al servidor):
 
-![Captura 2 — ORBITA-CA a les arrels de confiança del client]({{ '/assets/practiques/03-entitat-certificadora-ad/captura2-client.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura2-client.png' | relative_url }}" alt="Captura 2 — ORBITA-CA a les arrels de confiança del client" loading="lazy">
+  <figcaption>Captura 2 — ORBITA-CA a les arrels de confiança del client</figcaption>
+</figure>
 
 > **Repte 1 (captura 2b):** a `certsrv.msc`, clic dret sobre ORBITA-CA › *Propiedades* › *Ver certificado* › pestanya *Ruta de certificación*. Fes una captura on es vegi que la ruta només té un nivell. És el senyal que ORBITA-CA és l'arrel.
 
@@ -308,7 +317,10 @@ Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola
 
 > **Captura 3:** Edge al client amb la web del centre de control i l'avís *No seguro*.
 
-![Captura 3 — web HTTP amb avís No seguro]({{ '/assets/practiques/03-entitat-certificadora-ad/captura3.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura3.png' | relative_url }}" alt="Captura 3 — web HTTP amb avís No seguro" loading="lazy">
+  <figcaption>Captura 3 — web HTTP amb avís No seguro</figcaption>
+</figure>
 
 > **Repte 2 (captura 3b):** obre en pestanyes noves `http://10.0.2.6` i `http://dc-orbita.orbita.cat`. Surt la mateixa web? Fes una captura on es vegin les tres pestanyes. Són tres noms per al mateix servidor; recorda-ho, que al nivell 6 tornarà a sortir.
 
@@ -354,7 +366,10 @@ Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola
 
 > **Captura 4:** la pàgina d'avís d'Edge amb el codi `NET::ERR_CERT_AUTHORITY_INVALID`.
 
-![Captura 4 — avís NET::ERR_CERT_AUTHORITY_INVALID]({{ '/assets/practiques/03-entitat-certificadora-ad/captura4.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura4.png' | relative_url }}" alt="Captura 4 — avís NET::ERR_CERT_AUTHORITY_INVALID" loading="lazy">
+  <figcaption>Captura 4 — avís NET::ERR_CERT_AUTHORITY_INVALID</figcaption>
+</figure>
 
 > **Repte 3 (captura 4b):** al servidor, fabrica un certificat per a `www.google.com` amb el nom amistós `Google de mentida`, llista els certificats de l'equip (subjecte = emissor) i després esborra'l:
 > ```powershell
@@ -392,7 +407,10 @@ Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola
 
 > **Captura 5:** la carpeta *Plantillas de certificado* de `certsrv.msc` amb *WebServer-SAN* publicada.
 
-![Captura 5 — WebServer-SAN publicada a la CA]({{ '/assets/practiques/03-entitat-certificadora-ad/captura5.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura5.png' | relative_url }}" alt="Captura 5 — WebServer-SAN publicada a la CA" loading="lazy">
+  <figcaption>Captura 5 — WebServer-SAN publicada a la CA</figcaption>
+</figure>
 
 > **Repte 4 (captura 5b):** a `certtmpl.msc`, obre les propietats de *WebServer-SAN*, ves a la pestanya *Extensiones* i selecciona *Directivas de aplicación*. Fes una captura de l'ús que surt. Aquest ús és el que diu que el certificat serveix per identificar un servidor, i no per signar scripts.
 
@@ -500,7 +518,10 @@ Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola
 
 > **Captura 6:** la sortida de l'últim `Get-ChildItem`, amb els dos certificats i els seus emissors.
 
-![Captura 6 — cadenat de pega vs cadenat oficial]({{ '/assets/practiques/03-entitat-certificadora-ad/captura6.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura6.png' | relative_url }}" alt="Captura 6 — cadenat de pega vs cadenat oficial" loading="lazy">
+  <figcaption>Captura 6 — cadenat de pega vs cadenat oficial</figcaption>
+</figure>
 
 > **Repte 5 (captura 6b):** a `certsrv.msc`, obre *Certificados emitidos* i busca el certificat que acabes de demanar, el de la plantilla *WebServer-SAN*. Obre'l amb doble clic, ves a la pestanya *Detalles* i busca el camp on surt `control.orbita.cat` com a nom DNS. Fes-ne una captura.
 
@@ -534,11 +555,17 @@ Al client, la confiança en ORBITA-CA es comprova des de PowerShell (arriba sola
 
 > **Captura 7:** Edge amb la web i el cadenat, i el visor del certificat amb la jerarquia ORBITA-CA › `control.orbita.cat`.
 
-![Captura 7 — web amb cadenat oficial]({{ '/assets/practiques/03-entitat-certificadora-ad/captura7-cadenat.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura7-cadenat.png' | relative_url }}" alt="Captura 7 — web amb cadenat oficial" loading="lazy">
+  <figcaption>Captura 7 — web amb cadenat oficial</figcaption>
+</figure>
 
 I el visor del certificat, emès per a `control.orbita.cat` i signat per **ORBITA-CA**:
 
-![Captura 7 — visor del certificat (Emès per ORBITA-CA)]({{ '/assets/practiques/03-entitat-certificadora-ad/captura7-certificat.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura7-certificat.png' | relative_url }}" alt="Captura 7 — visor del certificat (Emès per ORBITA-CA)" loading="lazy">
+  <figcaption>Captura 7 — visor del certificat (Emès per ORBITA-CA)</figcaption>
+</figure>
 
 > **Repte 6 (captura 7b):** recordes els tres noms del repte 2? Obre `https://10.0.2.6` i `https://dc-orbita.orbita.cat` en una finestra privada. Ara surt un avís. Prem el botó d'opcions avançades i fes una captura del codi d'error. Per què passa, si el certificat és oficial? Mira la condició 3 de la idea clau: el certificat només val per al nom `control.orbita.cat`, que és l'únic que hi ha al SAN.
 >
@@ -568,7 +595,10 @@ Al final de la pràctica cal lliurar les captures numerades. Les dels **reptes**
 | **7b** | CLIENT | Avís en obrir els altres dos noms per HTTPS (repte 6) |
 
 > Les imatges van a `assets/practiques/03-entitat-certificadora-ad/`. Per enllaçar-les al document, el patró és:
-> `![text alternatiu]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }})`
+> `<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura1.png' | relative_url }}" alt="text alternatiu" loading="lazy">
+  <figcaption>text alternatiu</figcaption>
+</figure>`
 
 **No esborris res.** Fes una instantània de les dues màquines amb el nom *Web amb HTTPS*: ho necessitaràs tot a la 2a part, *Carnets digitals per a l'equip*.
 
@@ -580,30 +610,54 @@ Captures reals dels reptes de l'enunciat (1b–7b), fetes al laboratori.
 
 **Repte 0 (1b)** — DNS: la zona `orbita.cat` amb els registres `dc-orbita`, `control` i `PC-CONTROL`, i els reenviadors `10.0.2.1` i `8.8.8.8`.
 
-![1b — zona orbita.cat]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-zona.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-zona.png' | relative_url }}" alt="1b — zona orbita.cat" loading="lazy">
+  <figcaption>1b — zona orbita.cat</figcaption>
+</figure>
 
-![1b — reenviadors DNS]({{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-reenviadors.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura1b-reenviadors.png' | relative_url }}" alt="1b — reenviadors DNS" loading="lazy">
+  <figcaption>1b — reenviadors DNS</figcaption>
+</figure>
 
 **Repte 1 (2b)** — la ruta de certificació d'ORBITA-CA només té un nivell: és la CA arrel.
 
-![2b — ruta de certificació d'un sol nivell]({{ '/assets/practiques/03-entitat-certificadora-ad/captura2b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura2b.png' | relative_url }}" alt="2b — ruta de certificació d'un sol nivell" loading="lazy">
+  <figcaption>2b — ruta de certificació d'un sol nivell</figcaption>
+</figure>
 
 **Repte 2 (3b)** — `control.orbita.cat`, `10.0.2.6` i `dc-orbita.orbita.cat`: tres noms, la mateixa web.
 
-![3b — tres pestanyes amb la mateixa web]({{ '/assets/practiques/03-entitat-certificadora-ad/captura3b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura3b.png' | relative_url }}" alt="3b — tres pestanyes amb la mateixa web" loading="lazy">
+  <figcaption>3b — tres pestanyes amb la mateixa web</figcaption>
+</figure>
 
 **Repte 3 (4b)** — un certificat fals per a `www.google.com`: el subjecte i l'emissor són el mateix (se signa ell mateix). Tenir-lo no et converteix en Google; després s'esborra.
 
-![4b — Google de mentida, subjecte = emissor]({{ '/assets/practiques/03-entitat-certificadora-ad/captura4b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura4b.png' | relative_url }}" alt="4b — Google de mentida, subjecte = emissor" loading="lazy">
+  <figcaption>4b — Google de mentida, subjecte = emissor</figcaption>
+</figure>
 
 **Repte 4 (5b)** — a la plantilla WebServer-SAN, *Extensiones › Directivas de aplicación* = **Autenticación del servidor**: serveix per identificar un servidor, no per signar scripts.
 
-![5b — Directivas de aplicación: Autenticación del servidor]({{ '/assets/practiques/03-entitat-certificadora-ad/captura5b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura5b.png' | relative_url }}" alt="5b — Directivas de aplicación: Autenticación del servidor" loading="lazy">
+  <figcaption>5b — Directivas de aplicación: Autenticación del servidor</figcaption>
+</figure>
 
 **Repte 5 (6b)** — al certificat emès, el camp *Nombre alternativo del titular* (SAN) conté `Nombre DNS=control.orbita.cat`.
 
-![6b — el SAN del certificat emès]({{ '/assets/practiques/03-entitat-certificadora-ad/captura6b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura6b.png' | relative_url }}" alt="6b — el SAN del certificat emès" loading="lazy">
+  <figcaption>6b — el SAN del certificat emès</figcaption>
+</figure>
 
 **Repte 6 (7b)** — `https://dc-orbita.orbita.cat` dona **NET::ERR_CERT_COMMON_NAME_INVALID**. El certificat és oficial i de confiança, però el nom no és al SAN (només hi ha `control.orbita.cat`). És la condició 3 de la cadena de confiança: el nom ha de coincidir.
 
-![7b — error de nom (ERR_CERT_COMMON_NAME_INVALID)]({{ '/assets/practiques/03-entitat-certificadora-ad/captura7b.png' | relative_url }})
+<figure>
+  <img src="{{ '/assets/practiques/03-entitat-certificadora-ad/captura7b.png' | relative_url }}" alt="7b — error de nom (ERR_CERT_COMMON_NAME_INVALID)" loading="lazy">
+  <figcaption>7b — error de nom (ERR_CERT_COMMON_NAME_INVALID)</figcaption>
+</figure>
